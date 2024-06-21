@@ -4,7 +4,7 @@ use axum::{
     routing::{get, Router},
 };
 
-use crate::controller::Todo;
+use crate::repositories::Todo;
 
 pub fn create_router() -> Router {
     return Router::new().route("/", get(routing_get_all_todo));
