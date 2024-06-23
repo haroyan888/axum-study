@@ -1,16 +1,18 @@
+use std::sync::Arc;
+
 use axum::{
+    extract::{Extension, Path},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, Router},
+    Json,
 };
 
-use crate::repositories::Todo;
+use crate::repositories::TodoRepository;
 
-pub fn create_router() -> Router {
-    return Router::new().route("/", get(routing_get_all_todo));
-}
-
-fn routing_get_all_todo() -> Result<impl IntoResponse, StatusCode> {
-    todos = repository.all();
-    Ok((todos, StatusCode::OK))
+pub async fn find_todo<T: TodoRepository>(
+    Path(id): Path<i32>,
+    Extension(repository): Extension<Arc<T>>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let todo = repository.find(id).await.or(Err(StatusCode::NOT_FOUND))?;
+    Ok((StatusCode::OK, Json(todo)))
 }
