@@ -1,10 +1,10 @@
-use axum::{routing::get, Extension, Router};
+use axum::{Extension, Router, routing::{get, post, put}};
 use std::env;
 use std::path::Path;
 use std::sync::Arc;
 
 mod handlers;
-use handlers::find_todo;
+use handlers::{all_todo, create_todo, find_todo};
 mod repositories;
 use repositories::TodoRepository;
 
@@ -34,6 +34,11 @@ where
     T: TodoRepository + 'static,
 {
     Router::new()
-        .route("/todo/:id", get(find_todo::<T>))
-        .layer(Extension(Arc::new(repository)))
+    .nest("/todo", 
+        Router::new()
+        .route("/", get(all_todo::<T>))
+        .route("/new", post(create_todo::<T>))
+        .route("/:id", get(find_todo::<T>))
+    )
+    .layer(Extension(Arc::new(repository)))
 }

@@ -160,6 +160,7 @@ dependencies = [
  "anyhow",
  "axum",
  "dotenvy",
+ "http-body",
  "hyper",
  "serde",
  "serde_json",

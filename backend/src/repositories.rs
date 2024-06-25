@@ -5,7 +5,7 @@ use thiserror::Error;
 use validator::Validate;
 
 #[derive(Debug, Error)]
-enum RepositoryError {
+pub enum RepositoryError {
     #[error("Unexpected Error: [{0}]")]
     Unexpected(String),
     #[error("NotFound, id is {0}")]
@@ -33,7 +33,7 @@ impl Todo {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Validate)]
 pub struct CreateTodo {
-    #[validate()]
+    #[validate(length(min=1, max=100))]
     title: String,
     description: Option<String>,
 }
@@ -48,10 +48,10 @@ pub struct UpdateTodo {
 #[async_trait]
 pub trait TodoRepository: Clone + std::marker::Send + std::marker::Sync {
     async fn create(&self, payload: CreateTodo) -> anyhow::Result<Todo>;
-    async fn find(&self, id: i32) -> anyhow::Result<Todo>;
+    async fn find(&self, id: i32) -> Result<Todo, RepositoryError>;
     async fn all(&self) -> anyhow::Result<Vec<Todo>>;
-    async fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo>;
-    async fn delete(&self, id: i32) -> anyhow::Result<()>;
+    async fn update(&self, id: i32, payload: UpdateTodo) -> Result<Todo, RepositoryError>;
+    async fn delete(&self, id: i32) -> Result<(), RepositoryError>;
 }
 
 #[derive(Debug, Clone)]
@@ -81,7 +81,7 @@ impl TodoRepository for TodoRepositoryForDB {
         return Ok(todo);
     }
 
-    async fn find(&self, id: i32) -> anyhow::Result<Todo> {
+    async fn find(&self, id: i32) -> Result<Todo, RepositoryError> {
         let todo = sqlx::query_as::<_, Todo>(
             r#"
                 select * from todo where id=?
@@ -106,7 +106,7 @@ impl TodoRepository for TodoRepositoryForDB {
         Ok(todos)
     }
 
-    async fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo> {
+    async fn update(&self, id: i32, payload: UpdateTodo) -> Result<Todo, RepositoryError> {
         let old_todo = self.find(id).await?;
         let todo =
             sqlx::query_as::<_, Todo>(r#"update todo set title=$1, description=$2, complete=$3"#)
@@ -114,11 +114,15 @@ impl TodoRepository for TodoRepositoryForDB {
                 .bind(payload.description.unwrap_or(old_todo.description))
                 .bind(payload.completed.unwrap_or(old_todo.completed))
                 .fetch_one(&self.pool)
-                .await?;
+                .await
+                .map_err(|err| match err {
+                    sqlx::Error::RowNotFound => RepositoryError::NotFound(id),
+                    _ => RepositoryError::Unexpected(err.to_string())
+                })?;
 
         Ok(todo)
     }
-    async fn delete(&self, id: i32) -> anyhow::Result<()> {
+    async fn delete(&self, id: i32) -> Result<(), RepositoryError> {
         sqlx::query(r#"delete todo where id=$1"#)
             .bind(id)
             .execute(&self.pool)
