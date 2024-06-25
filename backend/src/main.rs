@@ -1,7 +1,9 @@
 use axum::{routing::get, Extension, Router};
+use http::{method::Method, HeaderValue};
 use std::env;
 use std::path::Path;
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 
 mod handlers;
 use handlers::{all_todo, create_todo, delete_todo, find_todo, update_todo};
@@ -19,7 +21,17 @@ async fn main() -> anyhow::Result<()> {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URLが設定されていません");
     let repository = repositories::TodoRepositoryForDB::new(&database_url).await?;
 
-    let app = create_todo_router(repository);
+    let app = Router::new()
+        .nest(
+            "/api",
+            Router::new().nest("/todo", create_todo_router(repository)),
+        )
+        .layer(
+            CorsLayer::new()
+                .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
+                .allow_headers(Any)
+                .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap()),
+        );
 
     let listener = tokio::net::TcpListener::bind(format!("{}:{}", host, port))
         .await
@@ -34,16 +46,12 @@ where
     T: TodoRepository + 'static,
 {
     Router::new()
-        .nest(
-            "/todo",
-            Router::new()
-                .route("/", get(all_todo::<T>).post(create_todo::<T>))
-                .route(
-                    "/:id",
-                    get(find_todo::<T>)
-                        .patch(update_todo::<T>)
-                        .delete(delete_todo::<T>),
-                ),
+        .route("/", get(all_todo::<T>).post(create_todo::<T>))
+        .route(
+            "/search/:id",
+            get(find_todo::<T>)
+                .patch(update_todo::<T>)
+                .delete(delete_todo::<T>),
         )
         .layer(Extension(Arc::new(repository)))
 }

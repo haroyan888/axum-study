@@ -86,7 +86,10 @@ pub async fn update_todo<T: TodoRepository>(
     match res {
         Err(err) => match err {
             RepositoryError::NotFound(_) => Err(StatusCode::NOT_FOUND),
-            _ => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            RepositoryError::Unexpected(err) => {
+                println!("error : {}", err);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
         },
         Ok(todo) => Ok((StatusCode::CREATED, Json(todo))),
     }

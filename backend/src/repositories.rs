@@ -108,17 +108,19 @@ impl TodoRepository for TodoRepositoryForDB {
 
     async fn update(&self, id: i32, payload: UpdateTodo) -> Result<Todo, RepositoryError> {
         let old_todo = self.find(id).await?;
-        let todo =
-            sqlx::query_as::<_, Todo>(r#"update todo set title=$1, description=$2, complete=$3"#)
-                .bind(payload.title.unwrap_or(old_todo.title))
-                .bind(payload.description.unwrap_or(old_todo.description))
-                .bind(payload.completed.unwrap_or(old_todo.completed))
-                .fetch_one(&self.pool)
-                .await
-                .map_err(|err| match err {
-                    sqlx::Error::RowNotFound => RepositoryError::NotFound(id),
-                    _ => RepositoryError::Unexpected(err.to_string()),
-                })?;
+        let todo = sqlx::query_as::<_, Todo>(
+            r#"update todo set title=$1, description=$2, completed=$3 where id=$4 returning *"#,
+        )
+        .bind(payload.title.unwrap_or(old_todo.title))
+        .bind(payload.description.unwrap_or(old_todo.description))
+        .bind(payload.completed.unwrap_or(old_todo.completed))
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|err| match err {
+            sqlx::Error::RowNotFound => RepositoryError::NotFound(id),
+            _ => RepositoryError::Unexpected(err.to_string()),
+        })?;
 
         Ok(todo)
     }
