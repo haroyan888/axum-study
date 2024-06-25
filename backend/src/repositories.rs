@@ -33,12 +33,12 @@ impl Todo {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Validate)]
 pub struct CreateTodo {
-    #[validate(length(min=1, max=100))]
+    #[validate(length(min = 1, max = 100))]
     title: String,
     description: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Validate)]
 pub struct UpdateTodo {
     title: Option<String>,
     description: Option<String>,
@@ -117,7 +117,7 @@ impl TodoRepository for TodoRepositoryForDB {
                 .await
                 .map_err(|err| match err {
                     sqlx::Error::RowNotFound => RepositoryError::NotFound(id),
-                    _ => RepositoryError::Unexpected(err.to_string())
+                    _ => RepositoryError::Unexpected(err.to_string()),
                 })?;
 
         Ok(todo)
