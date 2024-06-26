@@ -1,6 +1,8 @@
 import ClearIcon from '@mui/icons-material/Clear';
 import { IconButton } from "@mui/material";
 
+import "./modal.css"
+
 type ModalProps = {
 	title: string,
 	isShowModal: boolean,
@@ -14,7 +16,6 @@ export default function Modal ({
 	closeModal,
 	children
 } : ModalProps) {
-
 	return (
 		<>	
 		{isShowModal ? (

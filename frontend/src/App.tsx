@@ -7,7 +7,7 @@ import TodoCard from "./components/Todo/Todo";
 import Todo from "./types/Todo";
 import AddFormModal from "./components/Modal/add-form-modal";
 
-async function getTodos() {
+async function getTodos(): Promise<[Todo]> {
   return await fetch("http://localhost:8000/api/todo")
     .then((res) => res.json())
     .then((json) => {
@@ -16,18 +16,25 @@ async function getTodos() {
     })
     .catch(() => {
       alert("データの取得に失敗しました");
-      return undefined;
+      return [];
     });
+}
+
+async function updateTodosHandler(setTodos: React.Dispatch<React.SetStateAction<Todo[]>>) {
+  const newTodos = await getTodos();
+  if (newTodos === undefined) {
+    alert("データなんかねーよ");
+    return;
+  }
+  setTodos(newTodos);
 }
 
 function App() {
   // Todoの取得に関する処理
-  const [todos, setTodos] = useState([]);
+  const [todos, setTodos] = useState<Todo[]>(new Array<Todo>);
   useEffect(() => {
-    (async () => {
-      setTodos(await getTodos());
-    })();
-  }, []);
+    (async () => {await updateTodosHandler(setTodos)})();
+  },[]);
 
   // Todoの追加用モーダルに関する処理
   const [isShowAddModal, setShowAddModal] = useState<boolean>(false);
@@ -35,15 +42,16 @@ function App() {
   return (
     <>
       {/* Todoの表示部 */}
-      {todos !== undefined
-        ? todos.map((element: Todo) => {
+      {todos.length ?
+          todos.map((element: Todo) => {
             return (
               <div key={element["id"]} className="m-10">
                 <TodoCard
-                  id={element["id"]}
-                  title={element["title"]}
-                  description={element["description"]}
-                  completed={element["completed"]}
+                  todo={element}
+                  afterEditTodo={() => {
+                    setShowAddModal(false);
+                    updateTodosHandler(setTodos);
+                  }}
                 />
               </div>
             );

@@ -20,16 +20,16 @@ pub struct Todo {
     completed: bool,
 }
 
-impl Todo {
-    pub fn new(id: i32, title: String, description: String, completed: bool) -> Self {
-        Self {
-            id,
-            title,
-            description,
-            completed,
-        }
-    }
-}
+// impl Todo {
+//     pub fn new(id: i32, title: String, description: String, completed: bool) -> Self {
+//         Self {
+//             id,
+//             title,
+//             description,
+//             completed,
+//         }
+//     }
+// }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Validate)]
 pub struct CreateTodo {
@@ -125,7 +125,7 @@ impl TodoRepository for TodoRepositoryForDB {
         Ok(todo)
     }
     async fn delete(&self, id: i32) -> Result<(), RepositoryError> {
-        sqlx::query(r#"delete todo where id=$1"#)
+        sqlx::query(r#"delete from todo where id=$1"#)
             .bind(id)
             .execute(&self.pool)
             .await

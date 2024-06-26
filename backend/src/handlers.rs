@@ -84,13 +84,13 @@ pub async fn update_todo<T: TodoRepository>(
     let res = repository.update(id, payload).await;
 
     match res {
-        Err(err) => match err {
-            RepositoryError::NotFound(_) => Err(StatusCode::NOT_FOUND),
-            RepositoryError::Unexpected(err) => {
-                println!("error : {}", err);
-                Err(StatusCode::INTERNAL_SERVER_ERROR)
+        Err(err) => {
+            println!("{err}");
+            match err {
+                RepositoryError::NotFound(_) => Err(StatusCode::NOT_FOUND),
+                RepositoryError::Unexpected(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
             }
-        },
+        }
         Ok(todo) => Ok((StatusCode::CREATED, Json(todo))),
     }
 }
@@ -106,6 +106,6 @@ pub async fn delete_todo<T: TodoRepository>(
             RepositoryError::NotFound(_) => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         },
-        Ok(_) => StatusCode::CREATED,
+        Ok(_) => StatusCode::NO_CONTENT,
     }
 }
